@@ -70,6 +70,9 @@ class Memmap(interfaces.plugins.PluginInterface):
                 btc_reg = re.compile(r'\b(bc(0([ac-hj-np-z02-9]{39}|[ac-hj-np-z02-9]{59})|1[ac-hj-np-z02-9]{8,87})|[13][a-km-zA-HJ-NP-Z1-9]{25,35})\b')
                 duplicated_str = []
                 printed_str = []
+                backup_offset = 0
+                backup_mapped_offset = 0
+                backup_mapped_size = 0
 
                 for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                     offset, size, mapped_offset, mapped_size, maplayer = mapval
@@ -130,8 +133,25 @@ class Memmap(interfaces.plugins.PluginInterface):
                                 if not result.get('error'):
                                     if adres not in printed_str:
                                         printed_str.append(adres)
-                                        yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset), format_hints.Hex(mapped_size),
-                                       format_hints.Hex(offset), adres))
+                                        #print(backup_offset)
+                                        if backup_offset == offset:
+                                            if backup_mapped_offset == mapped_offset:
+                                                if backup_mapped_size == size: # x len((str(hex(offset))))
+                                                    yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
+                                                          '='*len((str(hex(offset)))), adres))
+                                                else:
+                                                    yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), str(hex(mapped_size)),
+                                                          '='*len((str(hex(offset)))), adres))
+                                            else:
+                                                yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), '='*len((str(hex(mapped_size)))),
+                                                      '='*mapped_offset, adres))
+                                        else:
+                                            yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                               str(hex(offset)), adres))
+
+                            backup_offset = offset
+                            backup_mapped_offset = mapped_offset
+                            backup_mapped_size = mapped_size
 
                     if self.config['btc']:    
                         for adres in btc_recv_list:
@@ -145,19 +165,36 @@ class Memmap(interfaces.plugins.PluginInterface):
 
                                 if ad != '':
                                     if response.status_code == 200:
-                                        yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset), format_hints.Hex(mapped_size),
-                                               format_hints.Hex(offset), ad))
+                                        if backup_offset == offset:
+                                            if backup_mapped_offset == mapped_offset:
+                                                if backup_mapped_size == size: # x len((str(hex(offset))))
+                                                    yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
+                                                          '='*len((str(hex(offset)))), ad))
+                                                else:
+                                                    yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), str(hex(mapped_size)),
+                                                          '='*len((str(hex(offset)))), ad))
+                                            else:
+                                                yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), '='*len((str(hex(mapped_size)))),
+                                                      '='*mapped_offset, ad))
+                                        else:
+                                            yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                               str(hex(offset)), ad))
 
-                                #print(check)    
 
+                                #print(check)
+
+                            backup_offset = offset
+                            backup_mapped_offset = mapped_offset
+                            backup_mapped_size = mapped_size
+                    
                     offset += mapped_size
                     #print('offset: 0x%x'%offset)
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid([("Virtual", format_hints.Hex), ("Physical", format_hints.Hex),
-                                   ("Size", format_hints.Hex), ("Offset", format_hints.Hex), ("address", str)],
+        return renderers.TreeGrid([("      Virtual", str), ("  Physical", str),
+                                   ("  Size", str), ("       Offset", str), ("address", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
                                                                    layer_name = self.config['primary'],
