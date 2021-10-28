@@ -1,12 +1,13 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
-#
+
 import logging, re
 from typing import List
 import http.client
 import requests
 import json
 
+from blockcypher import get_address_overview
 from volatility3.framework import exceptions, renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
@@ -35,6 +36,14 @@ class Memmap(interfaces.plugins.PluginInterface):
             requirements.BooleanRequirement(name = 'dump',
                                             description = "Extract listed memory segments",
                                             default = False,
+                                            optional = True),
+            requirements.BooleanRequirement(name = 'btc',
+                                            description = "btc",
+                                            default = False,
+                                            optional = True),
+            requirements.BooleanRequirement(name = 'xrp',
+                                            description = "xrp",
+                                            default = False,
                                             optional = True)
         ]
 
@@ -56,14 +65,18 @@ class Memmap(interfaces.plugins.PluginInterface):
             file_handle = self.open("pid.{}.dmp".format(pid))
             with file_handle as file_data:
                 
+                json_Reg = re.compile(r'\{.*\:\{.*\:.*\}\}') #json
                 ripple_reg = re.compile(r'r[0-9a-zA-Z]{33,35}')
+                btc_reg = re.compile(r'\b(bc(0([ac-hj-np-z02-9]{39}|[ac-hj-np-z02-9]{59})|1[ac-hj-np-z02-9]{8,87})|[13][a-km-zA-HJ-NP-Z1-9]{25,35})\b')
                 duplicated_str = []
                 printed_str = []
 
                 for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                     offset, size, mapped_offset, mapped_size, maplayer = mapval
-
+                    #print(mapval)
                     ripple_recv_list = []
+                    btc_recv_list = []
+
                     file_output = "Disabled"
                     if self.config['dump']:
                         try:
@@ -73,11 +86,20 @@ class Memmap(interfaces.plugins.PluginInterface):
                             for b in data:
                                 buf += chr(b)
                             
-                            for j in ripple_reg.findall(buf): 
-                                if j not in ripple_recv_list:
-                                    if j not in duplicated_str:
-                                        ripple_recv_list.append(j)
-                                        duplicated_str.append(j)
+                            if json_Reg.search(buf):
+                                if self.config['xrp']:
+                                    for j in ripple_reg.findall(buf): 
+                                        if j not in ripple_recv_list:
+                                            if j not in duplicated_str:
+                                                ripple_recv_list.append(j)
+                                                duplicated_str.append(j)
+
+                                if self.config['btc']:
+                                    for j in btc_reg.findall(buf):
+                                        if j not in btc_recv_list:
+                                            if j not in duplicated_str:
+                                                btc_recv_list.append(j)
+                                                duplicated_str.append(j)
 
                             
                             file_output = file_handle.preferred_filename
@@ -86,32 +108,48 @@ class Memmap(interfaces.plugins.PluginInterface):
                             file_output = "Error outputting to file"
                             vollog.debug("Unable to write {}'s address {} to {}".format(
                                 proc_layer_name, offset, file_handle.preferred_filename))
-
-                    for adres in ripple_recv_list:
-                            
-                        APIKEY = '78b77cc0d045f94d99889a64872a4d021172cbf5'
-                        BASE = 'https://rest.cryptoapis.io/v2'
-                        address = adres
-                        NETWORK = 'testnet'
-                        with requests.Session() as session:
-                            h = {
-                                          'Content-Type': "application/json",
-                                          'X-API-Key': "78b77cc0d045f94d99889a64872a4d021172cbf5"
-                                        }
-
-                            r = session.get(
-                                f'{BASE}/blockchain-data/xrp-specific/{NETWORK}/addresses/{address}/transactions?limit=50&offset=10&transactionType=payment', headers=h)
-                            
-                            result = json.loads(json.dumps(r.json()))
-                            #print(result)
-                            if not result.get('error'):
-                                if adres not in printed_str:
-                                    printed_str.append(adres)
-                                    yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset), format_hints.Hex(mapped_size),
+                    if self.config['xrp']:
+                        for adres in ripple_recv_list:
+                                
+                            APIKEY = '78b77cc0d045f94d99889a64872a4d021172cbf5'
+                            BASE = 'https://rest.cryptoapis.io/v2'
+                            address = adres
+                            NETWORK = 'testnet'
+    
+                            with requests.Session() as session:
+                                h = {
+                                              'Content-Type': "application/json",
+                                              'X-API-Key': "78b77cc0d045f94d99889a64872a4d021172cbf5"
+                                            }
+    
+                                r = session.get(
+                                    f'{BASE}/blockchain-data/xrp-specific/{NETWORK}/addresses/{address}/transactions?limit=50&offset=10&transactionType=payment', headers=h)
+                                
+                                result = json.loads(json.dumps(r.json()))
+                                #print(result)
+                                if not result.get('error'):
+                                    if adres not in printed_str:
+                                        printed_str.append(adres)
+                                        yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset), format_hints.Hex(mapped_size),
                                        format_hints.Hex(offset), adres))
-                        
-                        
-                        
+
+                    if self.config['btc']:    
+                        for adres in btc_recv_list:
+                            tmp = str(adres).replace('(','').replace(')','').replace("'",'').replace(',','')
+                            address_list = tmp.split(' ')
+
+                            for ad in address_list:
+                                response = requests.get('https://www.blockchain.com/btc/address/'+ad)
+                                #print(response.url)
+                                #print(response.status_code)
+
+                                if ad != '':
+                                    if response.status_code == 200:
+                                        yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset), format_hints.Hex(mapped_size),
+                                               format_hints.Hex(offset), ad))
+
+                                #print(check)    
+
                     offset += mapped_size
                     #print('offset: 0x%x'%offset)
 
