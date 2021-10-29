@@ -68,7 +68,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 json_Reg = re.compile(r'\{.*\:\{.*\:.*\}\}') #json
                 ripple_reg = re.compile(r'r[0-9a-zA-Z]{33,35}')
                 btc_reg = re.compile(r'\b(bc(0([ac-hj-np-z02-9]{39}|[ac-hj-np-z02-9]{59})|1[ac-hj-np-z02-9]{8,87})|[13][a-km-zA-HJ-NP-Z1-9]{25,35})\b')
-                eth_reg = re.compile(r'^0x[a-fA-F0-9]{40}')
+                eth_reg = re.compile(r'0x[a-fA-F0-9]{40}')
 
                 duplicated_str = []
                 printed_str = []
@@ -108,7 +108,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                             if self.config['eth']:
                                 for j in eth_reg.findall(buf):
                                     if j not in eth_recv_list:
-                                        print(j)
+                                        #print(j)
                                         if j not in duplicated_str:
                                             eth_recv_list.append(j)
                                             duplicated_str.append(j)
@@ -213,7 +213,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                     if self.config['eth']:    
                         for adres in eth_recv_list:
                             response = requests.get('https://www.blockchain.com/eth/address/'+adres)
-                            print(response.url)
+                            #print(response.url)
                             if adres != '':
                                     if response.status_code == 200:
 
