@@ -79,6 +79,11 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 backup_mapped_offset = 0
                 backup_mapped_size = 0
 
+
+                t_backup_offset = 0
+                t_backup_mapped_offset = 0
+                t_backup_mapped_size = 0
+
                 for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                     offset, size, mapped_offset, mapped_size, maplayer = mapval
                     #print(mapval)
@@ -86,6 +91,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                     btc_recv_list = []
                     eth_recv_list = []
                     transaction_list = []
+                    rippple_transaction_list = []
 
                     file_output = "Disabled"
                     
@@ -103,19 +109,32 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         if j not in duplicated_str:
                                             ripple_recv_list.append(j)
                                             duplicated_str.append(j)
+
                             if self.config['btc']:
-                                for j in btc_reg.findall(buf):
-                                    if j not in btc_recv_list:
-                                        if j not in duplicated_str:
-                                            btc_recv_list.append(j)
-                                            duplicated_str.append(j)
+                                if 'address' in buf:
+                                    for j in btc_reg.findall(buf):
+                                        if j not in btc_recv_list:
+                                            if j not in duplicated_str:
+                                                btc_recv_list.append(j)
+                                                duplicated_str.append(j)
+
                             if self.config['eth']:
-                                for j in eth_reg.findall(buf):
-                                    if j not in eth_recv_list:
-                                        #print(j)
-                                        if j not in duplicated_str:
-                                            eth_recv_list.append(j)
-                                            duplicated_str.append(j)
+                                if 'address' in buf:
+                                    for j in eth_reg.findall(buf):
+                                        if j not in eth_recv_list:
+                                            #print(j)
+                                            if j not in duplicated_str:
+                                                eth_recv_list.append(j)
+                                                duplicated_str.append(j)
+
+                            if self.config['xrp']:
+                                if transactions_reg.search(buf):
+                                    if 'hash' in buf and 'ripple' in buf:
+                                        for j in transactions_reg.findall(buf):
+                                            if j not in rippple_transaction_list:
+                                                if j not in duplicated_str:
+                                                    rippple_transaction_list.append(j)
+                                                    duplicated_str.append(j)
 
                             if transactions_reg.search(buf):
                                 for j in transactions_reg.findall(buf):
@@ -218,7 +237,6 @@ class CryptoScan(interfaces.plugins.PluginInterface):
 
 
                                 #print(check)
-
                                 backup_offset = offset
                                 backup_mapped_offset = mapped_offset
                                 backup_mapped_size = mapped_size
@@ -228,6 +246,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                             response = requests.get('https://www.blockchain.com/eth/address/'+adres)
                             #print(response.url)
                             if adres != '':
+                                if adres != '0x0000000000000000000000000000000000000000':
                                     if response.status_code == 200:
 
                                         if backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
@@ -257,38 +276,90 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                             backup_mapped_offset = mapped_offset
                             backup_mapped_size = mapped_size
 
-                    for transaction in transaction_list:
-                        if not '00000000000000' in transaction:
-                            #if transaction[0] != transaction[1]:
-                              #  yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                #                          transaction, '='*50))
-                            url = 'https://www.blockchain.com'
+                    if self.config['btc'] or self.config['eth']:
+                        for transaction in transaction_list:
+                            if not '00000000000000' in transaction:
+                                #if transaction[0] != transaction[1]:
+                                  #  yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                    #                          transaction, '='*50))
+                                url = 'https://www.blockchain.com'
 
-                            if self.config['btc']:
-                                url = url + '/btc/tx/'
-                                
-                            elif self.config['xrp']:
-                                test = 1
+                                if self.config['btc']:
+                                    url = url + '/btc/tx/'
 
-                            elif self.config['eth']:
-                                url = url + '/eth/tx/'
-                                    
-                            try:
-                                if self.config['btc'] or self.config['eth']:
+                                elif self.config['xrp']:
+                                    test = 1
+
+                                elif self.config['eth']:
+                                    url = url + '/eth/tx/'
+
+                                try:
                                     response =requests.get(url+transaction)
-
                                     #print(response.url)
                                     if response.status_code == 200:
-                                        yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                                              transaction, '='*42))
+                                        
+                                        if t_backup_offset == offset and t_backup_mapped_offset != mapped_offset and t_backup_mapped_size != mapped_size:
+                                            yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                               transaction, '='*42))
 
-                                else:
+                                        elif t_backup_offset == offset and t_backup_mapped_offset != mapped_offset and t_backup_mapped_size == mapped_size: 
+                                            yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), '='*len((str(hex(mapped_size)))),
+                                               transaction, '='*42))
+                                        
+                                        elif t_backup_offset == offset and t_backup_mapped_offset == mapped_offset and t_backup_mapped_size != mapped_size: 
+                                            yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), str(hex(mapped_size)),
+                                               transaction, '='*42))
+                                        
+                                        elif t_backup_offset != offset and t_backup_mapped_offset == mapped_offset and t_backup_mapped_size == mapped_size:
+                                            yield (0, (str(hex(offset)), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
+                                               transaction, '='*42))
+
+                                        elif t_backup_offset != offset and t_backup_mapped_offset != mapped_offset and t_backup_mapped_size != mapped_size:
+                                            yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                               transaction, '='*42))
+                                        else:
+                                            yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
+                                               transaction, '='*42))
+
+                                        t_backup_offset = offset
+                                        t_backup_mapped_offset = mapped_offset
+                                        t_backup_mapped_size = mapped_size
+                                               
+                                except:
                                     yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                                              transaction, '='*42))
-                            except:
-                                yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                                          'not confirmed: '+ transaction, '='*42)) 
+                                                              'not confirmed: '+ transaction, '='*42)) 
 
+
+                    else:
+                        for transaction in rippple_transaction_list:
+                            if not '00000000000000' in transaction:
+                                if t_backup_offset == offset and t_backup_mapped_offset != mapped_offset and t_backup_mapped_size != mapped_size:
+                                            yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                               transaction, '='*42))
+
+                                elif t_backup_offset == offset and t_backup_mapped_offset != mapped_offset and t_backup_mapped_size == mapped_size: 
+                                            yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), '='*len((str(hex(mapped_size)))),
+                                               transaction, '='*42))
+
+                                elif t_backup_offset == offset and t_backup_mapped_offset == mapped_offset and t_backup_mapped_size != mapped_size: 
+                                            yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), str(hex(mapped_size)),
+                                               transaction, '='*42))
+                                
+                                elif t_backup_offset != offset and t_backup_mapped_offset == mapped_offset and t_backup_mapped_size == mapped_size:
+                                            yield (0, (str(hex(offset)), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
+                                               transaction, '='*42))
+
+                                elif t_backup_offset != offset and t_backup_mapped_offset != mapped_offset and t_backup_mapped_size != mapped_size:
+                                    yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                       transaction, '='*42))
+                                else:
+                                    yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
+                                       transaction, '='*42))
+
+                                t_backup_offset = offset
+                                t_backup_mapped_offset = mapped_offset
+                                t_backup_mapped_size = mapped_size
+    
                     offset += mapped_size
                     #print('offset: 0x%x'%offset)
 
