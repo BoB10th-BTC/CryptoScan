@@ -268,21 +268,26 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                 url = url + '/btc/tx/'
                                 
                             elif self.config['xrp']:
-                                url = url + '/xrp/tx/'
+                                test = 1
 
                             elif self.config['eth']:
                                 url = url + '/eth/tx/'
                                     
                             try:
-                                response =requests.get(url+transaction)
-                                
-                                #print(response.url)
-                                if response.status_code == 200:
+                                if self.config['btc'] or self.config['eth']:
+                                    response =requests.get(url+transaction)
+
+                                    #print(response.url)
+                                    if response.status_code == 200:
+                                        yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                                              transaction, '='*42))
+
+                                else:
                                     yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                                          transaction, '='*50))
+                                                              transaction, '='*42))
                             except:
                                 yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                                          'not confirmed: '+ transaction, '='*50)) 
+                                                          'not confirmed: '+ transaction, '='*42)) 
 
                     offset += mapped_size
                     #print('offset: 0x%x'%offset)
