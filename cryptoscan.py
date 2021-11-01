@@ -313,7 +313,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                     #print('offset: 0x%x'%offset)
             if self.config['btc']:
                 yield (0, ('', '', '', '', ''))
-                yield (0, (' '*60+'TXID',' '*8 + 'Time',' '*8+ 'Sender', ' '*40 + 'Recipient', ' '*34+'Amount'))
+                yield (0, (' '*60+'TXID',' '*8 + 'Time',' '*8+ 'Sender', ' '*40 + 'Recipient', ' '*36+'Amount'))
 
                 for transaction in transaction_list:
                             if not '00000000000000' in transaction:
@@ -325,23 +325,43 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                 if self.config['btc']:
                                     url = url + '/btc/tx/'
 
-                                elif self.config['xrp']:
-                                    test = 1
-
-                                elif self.config['eth']:
-                                    url = url + '/eth/tx/'
-
                                 response =requests.get(url+transaction)
                                 #print(response.url)
                                 if response.status_code == 200:
                                     res = requests.get('https://chain.api.btc.com/v3/tx/'+transaction)
                                     result = json.loads(json.dumps(res.json()))
                                     creation_time = str(result.get('data').get('created_at'))
-                                    str_time = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime(int(creation_time)))
+                                    str_time = time.strftime("%Y/%m/%d %H:%M:%S", time.gmtime(int(creation_time)-time.timezone))
                                     sender = result.get('data').get('inputs')[0].get('prev_addresses')[0]
                                     recipient = result.get('data').get('outputs')[1].get('addresses')[0]
                                     amount = str(result.get('data').get('inputs_value'))
                                     yield (0, (transaction,str_time,sender,recipient,amount))
+            
+            if self.config['eth']:
+                yield (0, ('', '', '', '', ''))
+                yield (0, (' '*60+'TXID',' '*8 + 'Time',' '*8+ 'Sender', ' '*40 + 'Recipient', ' '*36+'Amount'))
+
+                for transaction in transaction_list:
+                            if not '00000000000000' in transaction:
+                                #if transaction[0] != transaction[1]:
+                                  #  yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                    #                          transaction, '='*50))
+                                url = 'https://www.blockchain.com'
+
+                                if self.config['eth']:
+                                    url = url + '/eth/tx/'
+
+                                response =requests.get(url+transaction)
+                                #print(response.url)
+                                if response.status_code == 200:
+                                    res = requests.get('https://api.blockchair.com/ethereum/dashboards/transaction/'+'0x'+transaction)
+                                    result = json.loads(json.dumps(res.json()))
+                                    creation_time = result.get('data').get('0x'+transaction).get('transaction').get('time')
+                                    
+                                    sender = result.get('data').get('0x'+transaction).get('transaction').get('sender')
+                                    recipient = result.get('data').get('0x'+transaction).get('transaction').get('recipient')
+                                    amount = str(result.get('data').get('0x'+transaction).get('calls')[0].get('value'))
+                                    yield (0, (transaction,creation_time,sender,recipient,amount))
 
 
 
