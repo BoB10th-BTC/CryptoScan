@@ -363,8 +363,25 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     amount = str(result.get('data').get('0x'+transaction).get('calls')[0].get('value'))
                                     yield (0, (transaction,creation_time,sender,recipient,amount))
 
+            if self.config['xrp']:
+                yield (0, ('', '', '', '', ''))
+                yield (0, (' '*60+'TXID',' '*8 + 'Time',' '*17+ 'Sender', ' '*40 + 'Recipient', ' '*30+'Amount'))
+                
+                for transaction in rippple_transaction_list:
+                            if not '00000000000000' in transaction:
+                                try:
+                                    headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36'}
+                                    res = requests.get('https://api.xrpscan.com/api/v1/tx/'+transaction, headers=headers)
+                                    result = json.loads(json.dumps(res.json()))
+                                    creation_time = result.get('date')
+                                    sender = result.get('Account')
+                                    recipient = result.get('Destination')
+                                    amount = str(result.get('Amount').get('value'))
+                                    yield (0, (transaction,creation_time,sender,recipient,amount))
+                                except:
+                                    not_checked = 1
 
-
+    
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
