@@ -5,7 +5,7 @@ BTC (BoB Tracers of Coin)
 ## How it works
 ### Volatility Command
 ```
-python ./vol.py -f [memory.mem] windows.cryptoscan --pid [Process ID] --[btc,eth,xrp] [--pdf]
+python ./vol.py -f [memory.mem] windows.cryptoscan --pid [Process ID] --[btc,eth,xrp]
 ```
 ### Example
 ```python .\vol.py -f sample.mem windows.cryptoscan --pid --btc```
