@@ -1,15 +1,10 @@
-# This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
-# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
-
 import logging, re
 from typing import List
-import http.client
 import requests
 import json
 import time
 import datetime
 
-from blockcypher import get_address_overview
 from requests.api import request
 from volatility3.framework import exceptions, renderers, interfaces
 from volatility3.framework.configuration import requirements
@@ -74,8 +69,12 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 eth_reg = re.compile(r'0x[a-fA-F0-9]{40}')
                 transactions_reg = re.compile(r'[A-Fa-f0-9]{64}')
 
+                address_count = 0
+                tx_count = 0
+
                 duplicated_str = []
                 printed_str = []
+                check_pdf_list = []
 
                 transaction_list = []
                 rippple_transaction_list = []
@@ -176,7 +175,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     if adres not in printed_str:
                                         printed_str.append(adres)
                                         #print(backup_offset)
-
+                                        check_pdf_list.append(adres)
                                         with requests.Session() as sess:
                                             hd = {
                                                           'Content-Type': "application/json",
@@ -186,6 +185,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                             req = sess.get(
                                                 f'{BASE}/blockchain-data/xrp-specific/{NETWORK}/addresses/{address}?context=', headers=hd)
                                             result_balance = json.loads(json.dumps(req.json()))
+                                            
+                                            address_count += 1
 
                                             if 'amount' not in str(result_balance):
                                                 #print('1')
@@ -195,6 +196,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                             else:
                                                 #print(result_balance.get('data').get('item'))
                                                 balance = str(result_balance.get('data').get('item').get('balance').get('amount'))
+
+                                            check_pdf_list.append(balance)
 
                                             if backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
                                                 yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), str(hex(mapped_size)),
@@ -328,14 +331,24 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                 response =requests.get(url+transaction)
                                 #print(response.url)
                                 if response.status_code == 200:
-                                    res = requests.get('https://chain.api.btc.com/v3/tx/'+transaction)
-                                    result = json.loads(json.dumps(res.json()))
-                                    creation_time = str(result.get('data').get('created_at'))
-                                    str_time = time.strftime("%Y/%m/%d %H:%M:%S", time.gmtime(int(creation_time)-time.timezone))
-                                    sender = result.get('data').get('inputs')[0].get('prev_addresses')[0]
-                                    recipient = result.get('data').get('outputs')[1].get('addresses')[0]
-                                    amount = str(result.get('data').get('inputs_value'))
-                                    yield (0, (transaction,str_time,sender,recipient,amount))
+                                    try:
+                                        res = requests.get('https://chain.api.btc.com/v3/tx/'+transaction)
+                                        result = json.loads(json.dumps(res.json()))
+                                        creation_time = str(result.get('data').get('created_at'))
+                                        str_time = time.strftime("%Y/%m/%d %H:%M:%S", time.gmtime(int(creation_time)-time.timezone))
+                                        sender = result.get('data').get('inputs')[0].get('prev_addresses')[0]
+                                        recipient = result.get('data').get('outputs')[1].get('addresses')[0]
+                                        amount = str(result.get('data').get('inputs_value'))
+                                        yield (0, (transaction,str_time,sender,recipient,amount))
+                                    except:
+                                        res = requests.get('https://chain.api.btc.com/v3/tx/'+transaction)
+                                        result = json.loads(json.dumps(res.json()))
+                                        creation_time = str(result.get('data').get('created_at'))
+                                        str_time = time.strftime("%Y/%m/%d %H:%M:%S", time.gmtime(int(creation_time)-time.timezone))
+                                        sender = result.get('data').get('inputs')[0].get('prev_addresses')[0]
+                                        recipient = result.get('data').get('outputs')[0].get('addresses')[0]
+                                        amount = str(result.get('data').get('inputs_value'))
+                                        yield (0, (transaction,str_time,sender,recipient,amount))
             
             if self.config['eth']:
                 yield (0, ('', '', '', '', ''))
@@ -365,7 +378,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
 
             if self.config['xrp']:
                 yield (0, ('', '', '', '', ''))
-                yield (0, (' '*60+'TXID',' '*8 + 'Time',' '*17+ 'Sender', ' '*40 + 'Recipient', ' '*30+'Amount'))
+                yield (0, (' '*60+'TXID',' '*8 + 'Time',' '*17+ 'Sender', ' '*33 + 'Recipient', ' '*26+'Amount'))
                 
                 for transaction in rippple_transaction_list:
                             if not '00000000000000' in transaction:
@@ -378,9 +391,18 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     recipient = result.get('Destination')
                                     amount = str(result.get('Amount').get('value'))
                                     yield (0, (transaction,creation_time,sender,recipient,amount))
+                                    check_pdf_list.append(transaction)
+                                    check_pdf_list.append(creation_time)
+                                    check_pdf_list.append(sender)
+                                    check_pdf_list.append(recipient)
+                                    check_pdf_list.append(amount)
+
+                                    tx_count += 1
                                 except:
                                     not_checked = 1
-
+            
+            check_pdf_list.insert(0,str(address_count))
+            print(check_pdf_list)
     
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
