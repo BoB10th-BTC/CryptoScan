@@ -74,7 +74,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 eth_reg = re.compile(r'0x[a-fA-F0-9]{40}')
                 transactions_reg = re.compile(r'[A-Fa-f0-9]{64}')
 
-                mnemonic_reg = re.compile('[\x00-\x7F\n]{3,8}')
+                mnemonic_reg = re.compile('[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}[\x00-\x7F\n]{3,8}')
                 address_count = 0
                 tx_count = 0
 
@@ -162,10 +162,14 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     for j in mnemonic_reg.findall(buf):
                                         if j not in mnemonic_list:
                                             if j not in duplicated_str:
+                                                duplicated_str.append(j)
                                                 mnemonic_list.append(j)
                                     
                                     for word in mnemonic_list:
                                         if d.check(word.lower()):
+                                            yield (0, (str(hex(offset)), (str(hex(mapped_offset))), '='*len((str(hex(mapped_size)))),
+                                                   '',''))
+                                            print(word)
                                             mnemonic_count += 1
                                             
                             if mnemonic_count == 24:
