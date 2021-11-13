@@ -74,7 +74,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 eth_reg = re.compile(r'0x[a-fA-F0-9]{40}')
                 transactions_reg = re.compile(r'[A-Fa-f0-9]{64}')
 
-                mnemonic_reg = re.compile('[\\\\n]?[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}')
+                mnemonic_reg = re.compile('[\x00-\x7F\n]{3,8}')
                 address_count = 0
                 tx_count = 0
 
@@ -85,7 +85,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 transaction_list = []
                 rippple_transaction_list = []
                 
-                mnemonic_list = []
+                
 
                 d = enchant.PyPWL("wordlist.txt")
                 
@@ -104,7 +104,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                     ripple_recv_list = []
                     btc_recv_list = []
                     eth_recv_list = []
-
+                    
+                    mnemonic_list = []
                     mnemonic_count = 0
                     file_output = "Disabled"
                     
@@ -167,8 +168,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         if d.check(word.lower()):
                                             mnemonic_count += 1
                                             
-                                            if mnemonic_count == 24:
-                                                print(mnemonic_list)
+                            if mnemonic_count == 24:
+                                print(mnemonic_list)
                                             
                                                 
                                     
