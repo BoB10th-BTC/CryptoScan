@@ -4,6 +4,7 @@ import requests
 import json
 import time
 import datetime
+import enchant
 
 from requests.api import request
 from volatility3.framework import exceptions, renderers, interfaces
@@ -42,9 +43,9 @@ class CryptoScan(interfaces.plugins.PluginInterface):
             requirements.BooleanRequirement(name = 'eth',
                                             description = "print eth address",
                                             default = False,
-                                            optional = True)
+                                            optional = True),
             requirements.BooleanRequirement(name = 'mnemonic',
-                                            description = "print mnemonic",
+                                            description = "mnemonic",
                                             default = False,
                                             optional = True)
         ]
@@ -73,8 +74,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 eth_reg = re.compile(r'0x[a-fA-F0-9]{40}')
                 transactions_reg = re.compile(r'[A-Fa-f0-9]{64}')
 
-                mnemonic_reg = re.compile(r'[a-zA-Z\n]{3,8}')
-                
+                mnemonic_reg = re.compile('[\\\\n]?[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}')
                 address_count = 0
                 tx_count = 0
 
@@ -87,6 +87,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 
                 mnemonic_list = []
 
+                d = enchant.PyPWL("wordlist.txt")
+                
                 backup_offset = 0
                 backup_mapped_offset = 0
                 backup_mapped_size = 0
@@ -103,6 +105,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                     btc_recv_list = []
                     eth_recv_list = []
 
+                    mnemonic_count = 0
                     file_output = "Disabled"
                     
                     try:
@@ -159,7 +162,15 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         if j not in mnemonic_list:
                                             if j not in duplicated_str:
                                                 mnemonic_list.append(j)
-                                                duplicated_str.append(j)
+                                    
+                                    for word in mnemonic_list:
+                                        if d.check(word.lower()):
+                                            mnemonic_count += 1
+                                            
+                                            if mnemonic_count == 24:
+                                                print(mnemonic_list)
+                                            
+                                                
                                     
 
                         file_output = file_handle.preferred_filename
