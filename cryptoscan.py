@@ -43,6 +43,10 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                             description = "print eth address",
                                             default = False,
                                             optional = True)
+            requirements.BooleanRequirement(name = 'mnemonic',
+                                            description = "print mnemonic",
+                                            default = False,
+                                            optional = True)
         ]
 
     def _generator(self, procs):
@@ -69,6 +73,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 eth_reg = re.compile(r'0x[a-fA-F0-9]{40}')
                 transactions_reg = re.compile(r'[A-Fa-f0-9]{64}')
 
+                mnemonic_reg = re.compile(r'[a-zA-Z\n]{3,8}')
+                
                 address_count = 0
                 tx_count = 0
 
@@ -78,6 +84,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
 
                 transaction_list = []
                 rippple_transaction_list = []
+                
+                mnemonic_list = []
 
                 backup_offset = 0
                 backup_mapped_offset = 0
@@ -144,6 +152,15 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         if j not in duplicated_str:
                                             transaction_list.append(j)
                                             duplicated_str.append(j)
+                            
+                            if self.config['mnemonic']:
+                                if mnemonic_reg.search(buf):
+                                    for j in mnemonic_reg.findall(buf):
+                                        if j not in mnemonic_list:
+                                            if j not in duplicated_str:
+                                                mnemonic_list.append(j)
+                                                duplicated_str.append(j)
+                                    
 
                         file_output = file_handle.preferred_filename
                     except exceptions.InvalidAddressException:
