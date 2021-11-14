@@ -1,9 +1,9 @@
-import time
+import time, pytz, requests
 from datetime import datetime
 from itertools import zip_longest
 import reportlab.pdfbase.pdfform as pdfform
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Flowable
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -91,14 +91,6 @@ class BaseReport(object):
         textobject.textLine(text=self.doc_title)
         canvas.drawText(textobject)
 
-    # def frontPageImg(self, canvas, doc):  # pragma: no cover
-    #     self.c = canvas
-    #     width = 2.5 * inch
-    #     height = 1 * inch
-    #     img_x = self.pagesize[0] - width - doc.rightMargin
-    #     img_y = self.pagesize[1] - height - doc.topMargin * 0.5 + 40
-    #     self.c.drawImage(r"bob2.jpg", x=img_x, y=img_y, width=width, height=height, preserveAspectRatio=True)
-
     def buildDocument(self, filepath=None):
         doc = SimpleDocTemplate(filepath,
                                 title=self.doc_title,
@@ -174,7 +166,38 @@ class BaseReport(object):
         txTable.setStyle(txTableStyle)
         self.elements.append(Paragraph(str("Cryptocurrency Transaction Info - Transaction Info"), styles['Heading2']))
         self.elements.append(txTable)
+
+
+    def createTxLink(self, tableData, widths=None, colOrder=None):
+
+        if isinstance(tableData[0], dict):
+            tmp = []
+            if colOrder is None:
+                colOrder = [value for value in tableData[0].keys()]
+            tmp.append(
+                [Paragraph(str(value).replace(' ', '<br />'), styleBody) for value in colOrder])
+            for tableDict in tableData:
+                tmp.append([Paragraph(str(tableDict[key]), styleBody) for key in colOrder])
+            tableData = tmp
+
+        txLink = Table(tableData, repeatRows=(0, ), colWidths=widths)
+
+        txLinkStyle = TableStyle(
+                [('ALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                 ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.lightgrey),
+                 ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+                 ('OUTLINE', (0, 0), (-1, -1), 1, colors.lightgrey),
+                 ('LEFTPADDING', (0, 0), (-1, -1), 1),
+                 ('RIGHTPADDING', (0, 0), (-1, -1), 1),
+                 ('TOPPADDING', (0, 0), (-1, -1), 1),
+                 ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+                 ])
+
+        txLink.setStyle(txLinkStyle)
         self.elements.append(Paragraph(str("More at BTC.COM"), styles['Heading2']))
+        self.elements.append(txLink)
+
 
     def grouper(self, iterable, group_size, fillvalue=None):
         args = [iter(iterable)] * group_size
@@ -183,7 +206,6 @@ class BaseReport(object):
     def createSummary(self, summary):
         table_data = [Paragraph(f"<b>{summary}:</b> {info}", style) for summary, info in summary.items()]
         columns = 1
-        # table_data.insert(1, Paragraph("", style))
         if self.landscape:  
             columns = 1
         tableData = self.grouper(table_data, columns)
@@ -191,67 +213,121 @@ class BaseReport(object):
         addrTable = Table(tableData)
         addrTable.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE')]))
         self.elements.append(addrTable)
-        
 
     def createReport(self, data, widths):
         if(data==addrTableData):
             self.createAddrTable(data, widths)
         elif(data==txTableData):
             self.createTxTable(data, widths)
+        elif(data==txLinkData):
+            self.createTxLink(data, widths)    
         self.elements.append(Spacer(0, inch * 0.05))
 
 def getAddr(inputData):
     res = []    
-    for k in range(2, (inputAddrCount+1)*2, 2):    
-        res += inputData[k], inputData[k+1]
+    for k in range(2, (inputAddrCount)*3+2, 3):    
+        res += inputData[k], inputData[k+1], inputData[k+2]
     return res
 
 def getTx(inputData):
     res = []
-    for k in range((inputAddrCount+1)*2, len(inputData), 5):
+    for k in range((inputAddrCount)*3+2, len(inputData), 5):
         res += inputData[k], inputData[k+1], inputData[k+2], inputData[k+3], inputData[k+4]
     return res
 
-def setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData):
+def setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData, txLinkData):
     # 보고서 제목
     doc_title = "CryptoScan Report"
     test = BaseReport(doc_title, make_landscape=True)
 
     # 보고서 정보
     summary = {
-        'Report Name': 'CryptoScan_' + time.strftime('%H%M%S'),
-        'Report Created': datetime.today().strftime('%Y-%m-%d %H:%M:%S'),
+        'Report Name': 'CryptoScan_' + time.strftime('%m%d'),
+        'Report Created': datetime.now().astimezone(pytz.timezone('Asia/Seoul')),
         'Analysis Version': '1.0'
     }
-
     # 테이블 데이터 집어넣기
     for i in range(inputTxCount):
         txTableData+=([['TXID'], ['Time'], ['Sender'], ['Receiver'], ['Amount']])
     
-    for i in range(0, inputAddrCount *2, 2): # 8
-        val = [getAddr(inputData)[i], getAddr(inputData)[i+1]]
-        addrTableData.append(val)
+    for i in range(0, inputAddrCount * 3, 3): # 12
+        val1 = [getAddr(inputData)[i], getAddr(inputData)[i+1], getAddr(inputData)[i+2]]
+        addrTableData.append(val1)
 
     for j in range(0, inputTxCount*5): # 20
         txTableData[j+1].append(getTx(inputData)[j])
 
+
+            
+    # btc.com
+    url = []
+    for k in range(int(inputData[0]) * 3 + 2, len(inputData), 5): # 14, 19, 24, 29
+        if(reqtype != 'ripple'):
+            tmp = 'https://btc.com/btc/search?q='
+        else:
+            tmp = 'https://xrpscan.com/tx/'
+        url.append(bitlyUrl(tmp+inputData[k]))
+
+    for k, l in enumerate(url, start=1):
+        val2 = [k, l]
+        txLinkData.append(val2)
+
     test.createSummary(summary)
-    test.createReport(addrTableData, ['75%', '25%'])
+    test.createReport(addrTableData, ['50%', '43%', '7%'])
     test.createReport(txTableData, ['20%', '80%'])
+    test.createReport(txLinkData, ['10%', '90%'])
 
     test.buildDocument(r'Cryptoscan_Report.pdf')
 
+def setNumFormat(inputData):
+    # 숫자 콤마
+    for i in range(1, int(inputData[1]) + 1):
+        idx = 1 + int(inputData[0]) * 3 + 5 * i
+        inputData[idx] = format(int(inputData[idx]), ',')
+    # 코인 market price 반영
+    for j in range(3, int(inputData[0])*3 + 1, 3): # 3 6 9 12
+        global reqtype
+        if(inputData[j+1] == 'XRP'):
+            reqtype = "ripple"
+        elif(inputData[j+1] == 'BTC'):
+            reqtype = "bitcoin"
+        elif(inputData[j+1] == 'ETH'):
+            reqtype = 'ethereum'
+        else:
+            print("Input Data Error")
+        response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids="+reqtype+"&vs_currencies=usd")
+        marketPrice = response.json()[reqtype]['usd'] * float(inputData[j])
+        inputData[j] = inputData[j] + " (" + str(marketPrice) + " USD)"
+
+    return inputData
+
+def bitlyUrl(url):
+    # post_url = 'https://api-ssl.bitly.com/v3/shorten?access_token={token}&longUrl={url}'.format(
+    #     token='9d6490b11c965cbafcd0c3c6e239837825aaa4b5',
+    #     url=url
+    # )
+    # res = requests.get(post_url)
+    # if res.status_code == 200:
+    #     return res.json().get('data').get('url')
+    # else:
+    #     return url
+    
+    return url
+    
+    
+
 if __name__ == "__main__":  # pragma: no cover
 
-    inputData = ['4', '4', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', '0', 'raQwCVAJVqjrVm1Nj5SFRcX8i22BhdC9WA', '5711.005117', 'rshRbDTDVUA38vQxax9T7jBC1Bb3H7xQTR', '0', 'rHuULof8mk1m7wffrmsBAVB3g6yAHivbmQ', '0', '31A88C6685422785FF6C7CB2A768AEA918D2E9D6BFA9218E438B64E0A1D78A32', '2021-10-09T11:56:01.000Z', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', 'raQwCVAJVqjrVm1Nj5SFRcX8i22BhdC9WA', '10000000', '5A86F9D6820264B34F8801FA36C6C45DC72FFBEF02FBFA2EDAA9C33FC10B2AF0', '2021-09-25T04:32:10.000Z', 'rshRbDTDVUA38vQxax9T7jBC1Bb3H7xQTR', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', '9995000', 'ECFA57394ADF5570F836BDFFA47385324BA66FF8BED3EB94D2035F18D7524B33', '2021-09-25T04:19:42.000Z', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', 'rshRbDTDVUA38vQxax9T7jBC1Bb3H7xQTR', '30000000', '1F67F10BCB4396D8B905A0F4936E8166F34CECFF4975C3FC290956035C48FC98', '2021-09-25T01:55:21.000Z', 'rHuULof8mk1m7wffrmsBAVB3g6yAHivbmQ', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', '40670000']
-    
+    inputData = ['4', '4', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', '0', 'XRP', 'raQwCVAJVqjrVm1Nj5SFRcX8i22BhdC9WA', '5711.005117', 'XRP', 'rshRbDTDVUA38vQxax9T7jBC1Bb3H7xQTR', '0', 'XRP', 'rHuULof8mk1m7wffrmsBAVB3g6yAHivbmQ', '0', 'XRP', '31A88C6685422785FF6C7CB2A768AEA918D2E9D6BFA9218E438B64E0A1D78A32', '2021-10-09T11:56:01.000Z', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', 'raQwCVAJVqjrVm1Nj5SFRcX8i22BhdC9WA', '10000000', '5A86F9D6820264B34F8801FA36C6C45DC72FFBEF02FBFA2EDAA9C33FC10B2AF0', '2021-09-25T04:32:10.000Z', 'rshRbDTDVUA38vQxax9T7jBC1Bb3H7xQTR', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', '9995000', 'ECFA57394ADF5570F836BDFFA47385324BA66FF8BED3EB94D2035F18D7524B33', '2021-09-25T04:19:42.000Z', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', 'rshRbDTDVUA38vQxax9T7jBC1Bb3H7xQTR', '30000000', '1F67F10BCB4396D8B905A0F4936E8166F34CECFF4975C3FC290956035C48FC98', '2021-09-25T01:55:21.000Z', 'rHuULof8mk1m7wffrmsBAVB3g6yAHivbmQ', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', '40670000']
+    inputData = setNumFormat(inputData)
 
     inputAddrCount = int(inputData[0])
     inputTxCount = int(inputData[1])
     
-    addrTableData = [['Address', 'Balance']]
+    addrTableData = [['Address', 'Balance (USD)', 'Type']]
     txTableData = [['Tag', 'Value']]    
+    txLinkData = [['Number', 'Link']]
 
-    setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData)
+    setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData, txLinkData)
 
-    print("COMPLETE")
+    print("EXPORTED")
