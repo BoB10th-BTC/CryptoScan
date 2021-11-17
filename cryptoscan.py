@@ -15,6 +15,7 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.pdfgen import canvas
 from reportlab.lib.styles import getSampleStyleSheet
 
+from fake_useragent import UserAgent
 from requests.api import request
 from volatility3.framework import exceptions, renderers, interfaces
 from volatility3.framework.configuration import requirements
@@ -226,32 +227,36 @@ def getTx(inputData,inputAddrCount):
 
 def setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData, inputData):
     # 보고서 제목
-    doc_title = "CryptoScan Report"
-    test = BaseReport(doc_title, make_landscape=True)
+    error = 0
+    try:
+        doc_title = "CryptoScan Report"
+        test = BaseReport(doc_title, make_landscape=True)
 
-    # 보고서 정보
-    summary = {
-        'Report Name': 'CryptoScan_' + time.strftime('%H%M%S'),
-        'Report Created': datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S'),
-        'Analysis Version': '1.0'
-    }
+        # 보고서 정보
+        summary = {
+            'Report Name': 'CryptoScan_' + time.strftime('%H%M%S'),
+            'Report Created': datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S'),
+            'Analysis Version': '1.0'
+        }
 
-    # 테이블 데이터 집어넣기
-    for i in range(inputTxCount):
-        txTableData+=([['TXID'], ['Time'], ['Sender'], ['Receiver'], ['Amount']])
-    
-    for i in range(0, inputAddrCount *2, 2): # 8
-        val = [getAddr(inputData,inputAddrCount)[i], getAddr(inputData,inputAddrCount)[i+1]]
-        addrTableData.append(val)
+        # 테이블 데이터 집어넣기
+        for i in range(inputTxCount):
+            txTableData+=([['TXID'], ['Time'], ['Sender'], ['Receiver'], ['Amount']])
 
-    for j in range(0, inputTxCount*5): # 20
-        txTableData[j+1].append(getTx(inputData,inputAddrCount)[j])
+        for i in range(0, inputAddrCount *2, 2): # 8
+            val = [getAddr(inputData,inputAddrCount)[i], getAddr(inputData,inputAddrCount)[i+1]]
+            addrTableData.append(val)
 
-    test.createSummary(summary)
-    test.createReport(addrTableData, ['75%', '25%'],addrTableData,txTableData)
-    test.createReport(txTableData, ['20%', '80%'],addrTableData,txTableData)
+        for j in range(0, inputTxCount*5): # 20
+            txTableData[j+1].append(getTx(inputData,inputAddrCount)[j])
 
-    test.buildDocument(r'Cryptoscan_Report.pdf')     
+        test.createSummary(summary)
+        test.createReport(addrTableData, ['75%', '25%'],addrTableData,txTableData)
+        test.createReport(txTableData, ['20%', '80%'],addrTableData,txTableData)
+
+        test.buildDocument(r'Cryptoscan_Report.pdf') 
+    except:
+            error =1
     
 class CryptoScan(interfaces.plugins.PluginInterface):
     """Prints the memory map"""
@@ -336,7 +341,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 backup_mapped_offset = 0
                 backup_mapped_size = 0
 
-
+                check_error = 0
                 t_backup_offset = 0
                 t_backup_mapped_offset = 0
                 t_backup_mapped_size = 0
@@ -368,7 +373,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                             duplicated_str.append(j)
 
                             if self.config['btc']:
-                                if 'address' in buf:
+                                if 'address' in buf and 'bitcoin' in buf:
                                     for j in btc_reg.findall(buf):
                                         if j not in btc_recv_list:
                                             if j not in duplicated_str:
@@ -399,7 +404,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         if j not in duplicated_str:
                                             transaction_list.append(j)
                                             duplicated_str.append(j)
-                            
+                        
                             if self.config['mnemonic']:
                                 if mnemonic_reg.search(buf):
                                     for j in mnemonic_reg.findall(buf):
@@ -510,35 +515,46 @@ class CryptoScan(interfaces.plugins.PluginInterface):
 
                                 if ad != '':
                                     if response.status_code == 200:
-                                        res = requests.get('https://chain.api.btc.com/v3/address/'+ad)
-                                        result = json.loads(json.dumps(res.json()))
+                                        #time.sleep(10)
+                                        
+                                        ua = UserAgent(verify_ssl=False)
+                                        userAgent = ua.random
+                                        
+                                        headers = {'User-Agent': userAgent}
+                                        res = requests.get('https://chain.api.btc.com/v3/address/'+ad,headers=headers)
+                                        try:
+                                            #print(res.text)
+                                            result = json.loads(json.dumps(res.json()))
 
-                                        if result.get('status') == 'success':
-                                            #print(result.get('data').get('received'))
-                                            if backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
-                                                yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                                   ad,result.get('data').get('balance')))
+                                            if result.get('status') == 'success':
+                                                #print(result.get('data').get('received'))
+                                                if backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
+                                                    yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                                       ad,result.get('data').get('balance')))
 
-    
-                                            elif backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size == mapped_size: 
-                                                yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), '='*len((str(hex(mapped_size)))),
-                                                   ad,str(result.get('data').get('balance'))))
+
+                                                elif backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size == mapped_size: 
+                                                    yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), '='*len((str(hex(mapped_size)))),
+                                                       ad,str(result.get('data').get('balance'))))
+
+                                                elif backup_offset == offset and backup_mapped_offset == mapped_offset and backup_mapped_size != mapped_size: 
+                                                    yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), str(hex(mapped_size)),
+                                                       ad,str(result.get('data').get('balance'))))
+
+                                                elif backup_offset != offset and backup_mapped_offset == mapped_offset and backup_mapped_size == mapped_size:
+                                                    yield (0, (str(hex(offset)), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
+                                                       ad,str(result.get('data').get('balance'))))
+
+                                                elif backup_offset != offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
+                                                    yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                                       ad,str(result.get('data').get('balance'))))
+                                                else:
+                                                    yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
+                                                       ad,str(result.get('data').get('balance'))))
+
+                                        except:
+                                            check_error = 1
                                             
-                                            elif backup_offset == offset and backup_mapped_offset == mapped_offset and backup_mapped_size != mapped_size: 
-                                                yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), str(hex(mapped_size)),
-                                                   ad,str(result.get('data').get('balance'))))
-                                            
-                                            elif backup_offset != offset and backup_mapped_offset == mapped_offset and backup_mapped_size == mapped_size:
-                                                yield (0, (str(hex(offset)), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
-                                                   ad,str(result.get('data').get('balance'))))
-    
-                                            elif backup_offset != offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
-                                                yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                                   ad,str(result.get('data').get('balance'))))
-                                            else:
-                                                yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
-                                                   ad,str(result.get('data').get('balance'))))
-    
 
                                 #print(check)
                                 backup_offset = offset
@@ -604,7 +620,9 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                 #print(response.url)
                                 if response.status_code == 200:
                                     try:
-                                        res = requests.get('https://chain.api.btc.com/v3/tx/'+transaction)
+                                        #time.sleep(10)
+                                        headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36'}
+                                        res = requests.get('https://chain.api.btc.com/v3/tx/'+transaction, headers=headers)
                                         result = json.loads(json.dumps(res.json()))
                                         creation_time = str(result.get('data').get('created_at'))
                                         str_time = time.strftime("%Y/%m/%d %H:%M:%S", time.gmtime(int(creation_time)-time.timezone))
@@ -613,14 +631,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         amount = str(result.get('data').get('inputs_value'))
                                         yield (0, (transaction,str_time,sender,recipient,amount))
                                     except:
-                                        res = requests.get('https://chain.api.btc.com/v3/tx/'+transaction)
-                                        result = json.loads(json.dumps(res.json()))
-                                        creation_time = str(result.get('data').get('created_at'))
-                                        str_time = time.strftime("%Y/%m/%d %H:%M:%S", time.gmtime(int(creation_time)-time.timezone))
-                                        sender = result.get('data').get('inputs')[0].get('prev_addresses')[0]
-                                        recipient = result.get('data').get('outputs')[0].get('addresses')[0]
-                                        amount = str(result.get('data').get('inputs_value'))
-                                        yield (0, (transaction,str_time,sender,recipient,amount))
+                                        check_error = 1
             
             if self.config['eth']:
                 yield (0, ('', '', '', '', ''))
@@ -672,20 +683,28 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     tx_count += 1
                                 except:
                                     not_checked = 1
+
+                try:
+                    check_pdf_list.insert(0,str(address_count))
+                    check_pdf_list.insert(1,str(tx_count))
+                    #print(check_pdf_list)
+                except:
+                    print('')
             
-            check_pdf_list.insert(0,str(address_count))
-            check_pdf_list.insert(1,str(tx_count))
-            #print(check_pdf_list)
+            encoding = 0
             
             if self.config['pdf']:
-                inputAddrCount = int(check_pdf_list[0])
-                inputTxCount = int(check_pdf_list[1])
-    
-                addrTableData = [['Address', 'Balance']]
-                txTableData = [['Tag', 'Value']]    
+                try:
+                    inputAddrCount = int(check_pdf_list[0])
+                    inputTxCount = int(check_pdf_list[1])
 
-                setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData,check_pdf_list)
-                print("COMPLETE")
+                    addrTableData = [['Address', 'Balance']]
+                    txTableData = [['Tag', 'Value']]    
+
+                    setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData,check_pdf_list)
+                    #print("COMPLETE")
+                except:
+                    encoding = 1
 
     
     def run(self):
