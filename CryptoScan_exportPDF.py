@@ -152,9 +152,10 @@ class BaseReport(object):
         txTable = Table(tableData, repeatRows=(0, ), colWidths=widths)
 
         txTableStyle = TableStyle(
-                [('ALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                [('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                 ('ALIGN', (1, 1), (-1, -1), 'LEFT'),
                  ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.lightgrey),
+                 ('INNERGRID', (1, 5), (0, 0), 0.25, colors.black),
                  ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
                  ('OUTLINE', (0, 0), (-1, -1), 1, colors.lightgrey),
                  ('LEFTPADDING', (0, 0), (-1, -1), 1),
@@ -183,8 +184,8 @@ class BaseReport(object):
         txLink = Table(tableData, repeatRows=(0, ), colWidths=widths)
 
         txLinkStyle = TableStyle(
-                [('ALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                [('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                 ('ALIGN', (1, 1), (-1, -1), 'LEFT'),
                  ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.lightgrey),
                  ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
                  ('OUTLINE', (0, 0), (-1, -1), 1, colors.lightgrey),
@@ -195,7 +196,7 @@ class BaseReport(object):
                  ])
 
         txLink.setStyle(txLinkStyle)
-        self.elements.append(Paragraph(str("More at BTC.COM"), styles['Heading2']))
+        self.elements.append(Paragraph(str("More at Other Platforms"), styles['Heading2']))
         self.elements.append(txLink)
 
 
@@ -244,7 +245,9 @@ def setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData, txLinkData)
     summary = {
         'Report Name': 'CryptoScan_' + time.strftime('%m%d'),
         'Report Created': datetime.now().astimezone(pytz.timezone('Asia/Seoul')),
-        'Analysis Version': '1.0'
+        'Analysis Version': '1.0',
+        'Target File Name (size)': 'xxxxxxx.mem (4GB)',
+        'Target File Path: ': 'C:\XXXX'
     }
     # 테이블 데이터 집어넣기
     for i in range(inputTxCount):
@@ -326,7 +329,7 @@ if __name__ == "__main__":  # pragma: no cover
     
     addrTableData = [['Address', 'Balance (USD)', 'Type']]
     txTableData = [['Tag', 'Value']]    
-    txLinkData = [['Number', 'Link']]
+    txLinkData = [['Num', 'Link']]
 
     setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData, txLinkData)
 
