@@ -19,7 +19,6 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.pdfgen import canvas
 from reportlab.lib.styles import getSampleStyleSheet
 
-from fake_useragent import UserAgent
 from requests.api import request
 from volatility3.framework import exceptions, renderers, interfaces
 from volatility3.framework.configuration import requirements
@@ -599,10 +598,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     if response.status_code == 200:
                                         #time.sleep(10)
                                         
-                                        ua = UserAgent(verify_ssl=False)
-                                        userAgent = ua.random
                                         
-                                        headers = {'User-Agent': userAgent}
+                                        headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36'}
                                         res = requests.get('https://chain.api.btc.com/v3/address/'+ad,headers=headers)
                                         try:
                                             #print(res.text)
@@ -633,6 +630,11 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                                 else:
                                                     yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
                                                        ad,str(result.get('data').get('balance'))))
+                                                
+                                                check_pdf_list.append(ad)
+                                                check_pdf_list.append(str(result.get('data').get('balance')))
+                                                check_pdf_list.append('BTC')
+                                                address_count += 1
 
                                         except:
                                             check_error = 1
@@ -654,7 +656,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     if response.status_code == 200:
                                         res = requests.get(url)
                                         result = json.loads(json.dumps(res.json()))
-
+                                        
                                         if backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
                                             yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), str(hex(mapped_size)),
                                                adres,str(result.get('result'))))
@@ -677,6 +679,11 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         else:
                                             yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
                                                adres,str(result.get('result'))))
+                                            
+                                        check_pdf_list.append(adres)
+                                        check_pdf_list.append(str(result.get('result')))
+                                        check_pdf_list.append('ETH')
+                                        address_count += 1
 
                             backup_offset = offset
                             backup_mapped_offset = mapped_offset
@@ -757,6 +764,12 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         recipient = result.get('data').get('outputs')[1].get('addresses')[0]
                                         amount = str(result.get('data').get('inputs_value'))
                                         yield (0, (transaction,str_time,sender,recipient,amount))
+                                        check_pdf_list.append(transaction)
+                                        check_pdf_list.append(creation_time)
+                                        check_pdf_list.append(sender)
+                                        check_pdf_list.append(recipient)
+                                        check_pdf_list.append(amount)
+                                        tx_count+=1
                                     except:
                                         check_error = 1
             
@@ -778,6 +791,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                 #print(response.url)
                                 if response.status_code == 200:
                                     res = requests.get('https://api.blockchair.com/ethereum/dashboards/transaction/'+'0x'+transaction)
+                                    
                                     result = json.loads(json.dumps(res.json()))
                                     creation_time = result.get('data').get('0x'+transaction).get('transaction').get('time')
                                     
@@ -785,6 +799,13 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     recipient = result.get('data').get('0x'+transaction).get('transaction').get('recipient')
                                     amount = str(result.get('data').get('0x'+transaction).get('calls')[0].get('value'))
                                     yield (0, (transaction,creation_time,sender,recipient,amount))
+                                    check_pdf_list.append(transaction)
+                                    check_pdf_list.append(creation_time)
+                                    check_pdf_list.append(sender)
+                                    check_pdf_list.append(recipient)
+                                    check_pdf_list.append(amount)
+                                    tx_count+=1
+                
 
             if self.config['xrp']:
                 yield (0, ('', '', '', '', ''))
@@ -810,29 +831,23 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     tx_count += 1
                                 except:
                                     not_checked = 1
-
-                try:
-                    check_pdf_list.insert(0,str(address_count))
-                    check_pdf_list.insert(1,str(tx_count))
-                    #print(check_pdf_list)
-                except:
-                    print('')
             
-            encoding = 0
             
             if self.config['pdf']:
+                check_pdf_list.insert(0,str(address_count))
+                check_pdf_list.insert(1,str(tx_count))
                 test_pdf_list = ['4', '4', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', '0', 'XRP', 'raQwCVAJVqjrVm1Nj5SFRcX8i22BhdC9WA', '5711.005117', 'XRP', 'rshRbDTDVUA38vQxax9T7jBC1Bb3H7xQTR', '0', 'XRP', 'rHuULof8mk1m7wffrmsBAVB3g6yAHivbmQ', '0', 'XRP', '31A88C6685422785FF6C7CB2A768AEA918D2E9D6BFA9218E438B64E0A1D78A32', '2021-10-09T11:56:01.000Z', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', 'raQwCVAJVqjrVm1Nj5SFRcX8i22BhdC9WA', '10000000', '5A86F9D6820264B34F8801FA36C6C45DC72FFBEF02FBFA2EDAA9C33FC10B2AF0', '2021-09-25T04:32:10.000Z', 'rshRbDTDVUA38vQxax9T7jBC1Bb3H7xQTR', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', '9995000', 'ECFA57394ADF5570F836BDFFA47385324BA66FF8BED3EB94D2035F18D7524B33', '2021-09-25T04:19:42.000Z', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', 'rshRbDTDVUA38vQxax9T7jBC1Bb3H7xQTR', '30000000', '1F67F10BCB4396D8B905A0F4936E8166F34CECFF4975C3FC290956035C48FC98', '2021-09-25T01:55:21.000Z', 'rHuULof8mk1m7wffrmsBAVB3g6yAHivbmQ', 'rUNzcGi4eZUmEcprhmAAKto4fTJLsNQBEb', '40670000']
 
-                test_pdf_list = setNumFormat(test_pdf_list)
-                inputAddrCount = int(test_pdf_list[0])
-                inputTxCount = int(test_pdf_list[1])
+                check_pdf_list = setNumFormat(check_pdf_list)
+                inputAddrCount = int(check_pdf_list[0])
+                inputTxCount = int(check_pdf_list[1])
 
                 addrTableData = [['Address', 'Balance (USD)', 'Type']]
                 txTableData = [['Tag', 'Value']]    
                 txLinkData = [['Num', 'Link']]
 
-                setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData, txLinkData, test_pdf_list)
-                print("COMPLETE")
+                setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData, txLinkData, check_pdf_list)
+                #print("COMPLETE")
 
 
     
