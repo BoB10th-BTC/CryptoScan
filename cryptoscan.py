@@ -365,10 +365,13 @@ class CryptoScan(interfaces.plugins.PluginInterface):
             requirements.BooleanRequirement(name = 'mnemonic',
                                             description = "mnemonic",
                                             default = False,
-                                            optional = True)
-            ,
+                                            optional = True),
             requirements.BooleanRequirement(name = 'pdf',
                                             description = "export pdf",
+                                            default = False,
+                                            optional = True),
+            requirements.BooleanRequirement(name = 'swap',
+                                            description = "export swapId",
                                             default = False,
                                             optional = True)
         ]
@@ -398,6 +401,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 transactions_reg = re.compile(r'[A-Fa-f0-9]{64}')
 
                 mnemonic_reg = re.compile('[a-z]{3,8}')
+                swap_id_reg = re.compile(r'("|)(swapId)("|:)(:| )("[a-zA-Z1-9]{10,20}")')
                 exr = re.compile('[\\\\n]?[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}')
                 address_count = 0
                 tx_count = 0
@@ -408,7 +412,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
 
                 transaction_list = []
                 rippple_transaction_list = []
-                
+                swap_list = []
                 
 
                 d = enchant.PyPWL("wordlist.txt")
@@ -441,6 +445,15 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                         for b in data:
                             buf += chr(b)
                         
+                        if self.config['swap']:
+                                if 'swap' in buf:
+                                    if swap_id_reg.search(buf):
+                                        for j in swap_id_reg.findall(buf):
+                                            if j not in swap_list:
+                                                if j not in duplicated_str:
+                                                    swap_list.append(j)
+                                                    duplicated_str.append(j)
+                                                    
                         if json_Reg.search(buf):
                             if self.config['xrp']:
                                 for j in ripple_reg.findall(buf): 
@@ -474,7 +487,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                                 if j not in duplicated_str:
                                                     rippple_transaction_list.append(j)
                                                     duplicated_str.append(j)
-
+     
+                            
                             if transactions_reg.search(buf):
                                 for j in transactions_reg.findall(buf):
                                     if j not in transaction_list:
@@ -691,6 +705,12 @@ class CryptoScan(interfaces.plugins.PluginInterface):
     
                     offset += mapped_size
                     #print('offset: 0x%x'%offset)
+                    
+                    if self.config['swap']:
+                        for swap_id in swap_list:
+                            if swap_id not in printed_str:
+                                print(swap_id)
+                                printed_str.append(swap_id)
                     
             if self.config['mnemonic']:
                 pid_buf = open("pid.{}.dmp".format(pid),'rb')
