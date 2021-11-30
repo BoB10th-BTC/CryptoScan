@@ -373,6 +373,14 @@ class CryptoScan(interfaces.plugins.PluginInterface):
             requirements.BooleanRequirement(name = 'swap',
                                             description = "export swapId",
                                             default = False,
+                                            optional = True),
+            requirements.StringRequirement(name = 'ethapi',
+                                            description = "ethapi",
+                                            default = False,
+                                            optional = True),
+            requirements.StringRequirement(name = 'xrpapi',
+                                            description = "xrpapi",
+                                            default = False,
                                             optional = True)
         ]
 
@@ -393,6 +401,9 @@ class CryptoScan(interfaces.plugins.PluginInterface):
 
             file_handle = self.open("pid.{}.dmp".format(pid))
             with file_handle as file_data:
+                
+                eth_apikey = self.config.get('ethapi',None)
+                xrp_apikey = self.config.get('xrpapi',None)
                 
                 json_Reg = re.compile(r'\{.*\:\{.*\:.*\}\}') #json
                 ripple_reg = re.compile(r'r[0-9a-zA-Z]{33,35}')
@@ -533,7 +544,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                             with requests.Session() as session:
                                 h = {
                                               'Content-Type': "application/json",
-                                              'X-API-Key': "78b77cc0d045f94d99889a64872a4d021172cbf5"
+                                              'X-API-Key': xrp_apikey
+                                              #78b77cc0d045f94d99889a64872a4d021172cbf5
                                             }
     
                                 r = session.get(
@@ -663,7 +675,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                         for adres in eth_recv_list:
                             response = requests.get('https://www.blockchain.com/eth/address/'+adres)
                             #print(response.url)
-                            API_KEY = 'W7M246525TUVWK8MACMD58I9RD9FFURUUK'
+                            API_KEY = eth_apikey #'W7M246525TUVWK8MACMD58I9RD9FFURUUK'
                             url = 'https://api.etherscan.io/api?module=account&action=balance&address='+adres+'&tag=latest&apikey='+API_KEY
                             if adres != '':
                                 if adres != '0x0000000000000000000000000000000000000000':
@@ -709,7 +721,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                     if self.config['swap']:
                         for swap_id in swap_list:
                             if swap_id not in printed_str:
-                                print(swap_id)
+                                yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
+                                               'swapId',swap_id[4].replace('"','')))
                                 printed_str.append(swap_id)
                     
             if self.config['mnemonic']:
