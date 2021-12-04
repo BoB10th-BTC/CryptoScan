@@ -6,6 +6,7 @@ import time
 import datetime
 import enchant
 import os
+import maya
 
 import time, pytz, requests
 from datetime import datetime
@@ -413,6 +414,9 @@ class CryptoScan(interfaces.plugins.PluginInterface):
 
                 mnemonic_reg = re.compile('[a-z]{3,8}')
                 swap_id_reg = re.compile(r'("|)(swapId)("|:)(:| )("[a-zA-Z1-9]{10,20}")')
+                swap_op_id = re.compile(r'("operationId":")([a-z1-9]{2,10}:[1-9]:[a-z]{3,8})')
+                swap_receive_id = re.compile(r'("receiverAccountId":")([a-z1-9]{2,10}:[1-9]:[a-z]{3,8})')
+                
                 exr = re.compile('[\\\\n]?[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}')
                 address_count = 0
                 tx_count = 0
@@ -424,6 +428,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 transaction_list = []
                 rippple_transaction_list = []
                 swap_list = []
+                swap_op_id_list = []
+                swap_receive_id_list = []
                 
 
                 d = enchant.PyPWL("wordlist.txt")
@@ -464,6 +470,20 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                                 if j not in duplicated_str:
                                                     swap_list.append(j)
                                                     duplicated_str.append(j)
+                                    
+                                    if swap_op_id.search(buf):
+                                        for j in swap_op_id.findall(buf):
+                                            if j not in swap_op_id_list:
+                                                if j not in duplicated_str:
+                                                    #print(buf)
+                                                    swap_op_id_list.append(j)
+                                                    
+                                    if swap_receive_id.search(buf):
+                                        for j in swap_receive_id.findall(buf):
+                                            if j not in swap_receive_id_list:
+                                                if j not in duplicated_str:
+                                                    #print(j)
+                                                    swap_receive_id_list.append(j)
                                                     
                         if json_Reg.search(buf):
                             if self.config['xrp']:
@@ -535,7 +555,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                     if self.config['xrp']:
                         for adres in ripple_recv_list:
                                 
-                            APIKEY = '78b77cc0d045f94d99889a64872a4d021172cbf5'
+                            APIKEY = xrp_apikey #'78b77cc0d045f94d99889a64872a4d021172cbf5'
                             BASE = 'https://rest.cryptoapis.io/v2'
                             address = adres
                             NETWORK = 'testnet'
@@ -562,7 +582,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         with requests.Session() as sess:
                                             hd = {
                                                           'Content-Type': "application/json",
-                                                          'X-API-Key': "78b77cc0d045f94d99889a64872a4d021172cbf5"
+                                                          'X-API-Key': xrp_apikey#"78b77cc0d045f94d99889a64872a4d021172cbf5"
                                                         }
 
                                             req = sess.get(
@@ -721,8 +741,13 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                     if self.config['swap']:
                         for swap_id in swap_list:
                             if swap_id not in printed_str:
-                                yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                               'swapId',swap_id[4].replace('"','')))
+                                yield (0, ("      Virtual",'  Physical',' '*8+ 'swap_id', ' '*5 + 'from', ' '*10+'to'))
+                                #print(swap_op_id_list[0])
+                                swap_from = str(swap_op_id_list[0]).split(':')[-1].replace("'",'').replace(')','')
+                                #print(str(swap_from))
+                                swap_to = str(swap_receive_id_list[0]).split(':')[-1].replace("'",'').replace(')','')
+                                
+                                yield (0, (str(hex(offset)),str(hex(mapped_offset)),swap_id[4].replace('"',''),swap_from,swap_to))
                                 printed_str.append(swap_id)
                     
             if self.config['mnemonic']:
@@ -792,7 +817,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         res = requests.get('https://chain.api.btc.com/v3/tx/'+transaction, headers=headers)
                                         result = json.loads(json.dumps(res.json()))
                                         creation_time = str(result.get('data').get('created_at'))
-                                        str_time = time.strftime("%Y/%m/%d %H:%M:%S", time.gmtime(int(creation_time)-time.timezone))
+                                        str_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(int(creation_time)))
                                         sender = result.get('data').get('inputs')[0].get('prev_addresses')[0]
                                         recipient = result.get('data').get('outputs')[1].get('addresses')[0]
                                         amount = str(result.get('data').get('inputs_value'))
@@ -850,7 +875,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36'}
                                     res = requests.get('https://api.xrpscan.com/api/v1/tx/'+transaction, headers=headers)
                                     result = json.loads(json.dumps(res.json()))
-                                    creation_time = result.get('date')
+                                    creation_time = result.get('date').replace('T',' ').replace('.000Z','')
                                     sender = result.get('Account')
                                     recipient = result.get('Destination')
                                     amount = str(result.get('Amount').get('value'))
