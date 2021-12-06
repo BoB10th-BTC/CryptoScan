@@ -385,7 +385,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                             optional = True)
         ]
 
-    def _generator(self, procs):
+    def _generator(self, procs): 
         
 
         for proc in procs:
@@ -598,7 +598,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                             
                                             else:
                                                 #print(result_balance.get('data').get('item'))
-                                                balance = str(result_balance.get('data').get('item').get('balance').get('amount'))
+                                                balance = str('{0:,}'.format(float(result_balance.get('data').get('item').get('balance').get('amount'))))
 
                                             check_pdf_list.append(balance)
                                             check_pdf_list.append('xrp')
@@ -644,46 +644,53 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     if response.status_code == 200:
                                         #time.sleep(10)
                                         
-                                        
+                                        time.sleep(5)
                                         headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36'}
                                         res = requests.get('https://chain.api.btc.com/v3/address/'+ad,headers=headers)
                                         try:
                                             #print(res.text)
                                             result = json.loads(json.dumps(res.json()))
-
+                                            
                                             if result.get('status') == 'success':
                                                 #print(result.get('data').get('received'))
+                                                balance = float(result.get('data').get('balance')*0.00000001)
+                                                str_balance = ''
+                                                if balance == 0.0:
+                                                    str_balance = '0'
+                                                else:
+                                                    str_balance = str('{0:,}'.format(balance))
+                                                    
                                                 if backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
                                                     yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                                       ad,result.get('data').get('balance')))
+                                                       ad,str_balance))
 
 
                                                 elif backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size == mapped_size: 
                                                     yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), '='*len((str(hex(mapped_size)))),
-                                                       ad,str(result.get('data').get('balance'))))
+                                                       ad,str_balance))
 
                                                 elif backup_offset == offset and backup_mapped_offset == mapped_offset and backup_mapped_size != mapped_size: 
                                                     yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), str(hex(mapped_size)),
-                                                       ad,str(result.get('data').get('balance'))))
+                                                       ad,str_balance))
 
                                                 elif backup_offset != offset and backup_mapped_offset == mapped_offset and backup_mapped_size == mapped_size:
                                                     yield (0, (str(hex(offset)), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
-                                                       ad,str(result.get('data').get('balance'))))
+                                                       ad,str_balance))
 
                                                 elif backup_offset != offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
                                                     yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                                       ad,str(result.get('data').get('balance'))))
+                                                       ad,str_balance))
                                                 else:
                                                     yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
-                                                       ad,str(result.get('data').get('balance'))))
+                                                       ad,str_balance))
                                                 
                                                 check_pdf_list.append(ad)
-                                                check_pdf_list.append(str(result.get('data').get('balance')))
+                                                check_pdf_list.append(str('{0:,}'.format(balance)))
                                                 check_pdf_list.append('BTC')
                                                 address_count += 1
 
                                         except:
-                                            check_error = 1
+                                            pass
                                             
 
                                 #print(check)
@@ -702,32 +709,36 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     if response.status_code == 200:
                                         res = requests.get(url)
                                         result = json.loads(json.dumps(res.json()))
-                                        
+                                        #balance = str(result.get('result'))
+                                        try:
+                                            balance = str('{0:,}'.format(float(result.get('result')*0.000000000000000001)))
+                                        except:
+                                            balance = '0'
                                         if backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
                                             yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                               adres,str(result.get('result'))))
+                                               adres,balance))
 
                                         elif backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size == mapped_size: 
                                             yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), '='*len((str(hex(mapped_size)))),
-                                               adres,str(result.get('result'))))
+                                               adres,balance))
                                         
                                         elif backup_offset == offset and backup_mapped_offset == mapped_offset and backup_mapped_size != mapped_size: 
                                             yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), str(hex(mapped_size)),
-                                               adres,str(result.get('result'))))
+                                               adres,balance))
                                         
                                         elif backup_offset != offset and backup_mapped_offset == mapped_offset and backup_mapped_size == mapped_size:
                                             yield (0, (str(hex(offset)), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
-                                               adres,str(result.get('result'))))
+                                               adres,balance))
 
                                         elif backup_offset != offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
                                             yield (0, (str(hex(offset)), str(hex(mapped_offset)), str(hex(mapped_size)),
-                                               adres,str(result.get('result'))))
+                                               adres,balance))
                                         else:
                                             yield (0, ('='*len((str(hex(offset)))), '='*len((str(hex(mapped_offset)))), '='*len((str(hex(mapped_size)))),
-                                               adres,str(result.get('result'))))
+                                               adres,balance))
                                             
                                         check_pdf_list.append(adres)
-                                        check_pdf_list.append(str(result.get('result')))
+                                        check_pdf_list.append(balance)
                                         check_pdf_list.append('ETH')
                                         address_count += 1
 
@@ -808,11 +819,12 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                 if self.config['btc']:
                                     url = url + '/btc/tx/'
 
+                                
                                 response =requests.get(url+transaction)
                                 #print(response.url)
                                 if response.status_code == 200:
                                     try:
-                                        #time.sleep(10)
+                                        time.sleep(10)
                                         headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36'}
                                         res = requests.get('https://chain.api.btc.com/v3/tx/'+transaction, headers=headers)
                                         result = json.loads(json.dumps(res.json()))
@@ -820,7 +832,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         str_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(int(creation_time)))
                                         sender = result.get('data').get('inputs')[0].get('prev_addresses')[0]
                                         recipient = result.get('data').get('outputs')[1].get('addresses')[0]
-                                        amount = str(result.get('data').get('inputs_value'))
+                                        amount = '{0:,}'.format(float(result.get('data').get('inputs_value')*0.00000001)) # 수정필요
                                         yield (0, (transaction,str_time,sender,recipient,amount))
                                         check_pdf_list.append(transaction)
                                         check_pdf_list.append(creation_time)
@@ -855,7 +867,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     
                                     sender = result.get('data').get('0x'+transaction).get('transaction').get('sender')
                                     recipient = result.get('data').get('0x'+transaction).get('transaction').get('recipient')
-                                    amount = str(result.get('data').get('0x'+transaction).get('calls')[0].get('value'))
+                                    amount = str('{0:,}'.format(float(result.get('data').get('0x'+transaction).get('calls')[0].get('value'))*0.000000000000000001))
                                     yield (0, (transaction,creation_time,sender,recipient,amount))
                                     check_pdf_list.append(transaction)
                                     check_pdf_list.append(creation_time)
@@ -878,7 +890,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     creation_time = result.get('date').replace('T',' ').replace('.000Z','')
                                     sender = result.get('Account')
                                     recipient = result.get('Destination')
-                                    amount = str(result.get('Amount').get('value'))
+                                    amount = str('{0:,}'.format(result.get('Amount').get('value')*0.000001))
                                     yield (0, (transaction,creation_time,sender,recipient,amount))
                                     check_pdf_list.append(transaction)
                                     check_pdf_list.append(creation_time)
