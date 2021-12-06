@@ -303,7 +303,7 @@ def setNumFormat(inputData):
     
     for i in range(1, int(inputData[1]) + 1):
         idx = 1 + int(inputData[0]) * 3 + 5 * i
-        inputData[idx] = format(int(inputData[idx]), ',')
+        inputData[idx] = format(float(inputData[idx]), ',')
   
     for j in range(3, int(inputData[0])*3 + 1, 3): # 3 6 9 12
         global reqtype
@@ -316,7 +316,7 @@ def setNumFormat(inputData):
         else:
             print("Input Data Error")
         response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids="+reqtype+"&vs_currencies=usd")
-        marketPrice = response.json()[reqtype]['usd'] * float(inputData[j])
+        marketPrice = response.json()[reqtype]['usd'] * float(inputData[j].replace(',',''))
         inputData[j] = inputData[j] + " (" + str(marketPrice) + " USD)"
 
     return inputData
@@ -601,7 +601,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                                 balance = str('{0:,}'.format(float(result_balance.get('data').get('item').get('balance').get('amount'))))
 
                                             check_pdf_list.append(balance)
-                                            check_pdf_list.append('xrp')
+                                            check_pdf_list.append('XRP')
 
                                             if backup_offset == offset and backup_mapped_offset != mapped_offset and backup_mapped_size != mapped_size:
                                                 yield (0, ('='*len((str(hex(offset)))), str(hex(mapped_offset)), str(hex(mapped_size)),
