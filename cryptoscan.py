@@ -352,42 +352,45 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                         description = "Process ID to include (all other processes are excluded)",
                                         optional = True),
             requirements.BooleanRequirement(name = 'btc',
-                                            description = "print bitcoin address",
+                                            description = "btc : search bitcoin address, transaction",
                                             default = False,
                                             optional = True),
             requirements.BooleanRequirement(name = 'xrp',
-                                            description = "print xrp address",
+                                            description = "search ripple address, transaction",
                                             default = False,
                                             optional = True),
             requirements.BooleanRequirement(name = 'eth',
-                                            description = "print eth address",
+                                            description = "search ethereum address, transaction",
                                             default = False,
                                             optional = True),
             requirements.BooleanRequirement(name = 'mnemonic',
-                                            description = "mnemonic",
+                                            description = "search mnemonic in the specified process",
                                             default = False,
                                             optional = True),
             requirements.BooleanRequirement(name = 'pdf',
-                                            description = "export pdf",
+                                            description = "create report",
                                             default = False,
                                             optional = True),
             requirements.BooleanRequirement(name = 'swap',
-                                            description = "export swapId",
+                                            description = "search swapId",
                                             default = False,
                                             optional = True),
             requirements.StringRequirement(name = 'ethapi',
-                                            description = "ethapi",
+                                            description = "It is essential to add personal api key(etherscan.io).",
                                             default = False,
                                             optional = True),
             requirements.StringRequirement(name = 'xrpapi',
-                                            description = "xrpapi",
+                                            description = "It is essential to add personal api key(developers.cryptoapis.io).",
+                                            default = False,
+                                            optional = True),
+            requirements.BooleanRequirement(name = 'usage',
+                                            description = "usage example: python ./vol.py windows.cryptoscan --pid 1112 --eth --ethapi xadad12akddad112sa --pdf | python ./vol.py windows.cryptoscan --pid 1112 --btc --pdf | python ./vol.py windows.cryptoscan --pid 1112 --swap | python ./vol.py windows.cryptoscan --pid 1112 --mnemonic",
                                             default = False,
                                             optional = True)
         ]
 
     def _generator(self, procs): 
         
-
         for proc in procs:
             pid = "Unknown"
 
@@ -399,7 +402,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 vollog.debug("Process {}: invalid address {} in layer {}".format(pid, excp.invalid_address,
                                                                                  excp.layer_name))
                 continue
-
+            
             file_handle = self.open("pid.{}.dmp".format(pid))
             with file_handle as file_data:
                 
