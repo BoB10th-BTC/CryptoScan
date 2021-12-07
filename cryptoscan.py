@@ -1,3 +1,11 @@
+#Author: MoonGyu Lee
+#Contact: dlansrb5800@gmail.com
+#Description:
+#This plugin help you analyze hidden coin information on memory which is sotred in porcess.
+#For more information, Contact me or click on https://github.com/BoB10th-BTC/CryptoScan
+
+# This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 import logging, re
 from typing import List
 import requests
