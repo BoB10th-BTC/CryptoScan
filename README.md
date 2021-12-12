@@ -1,5 +1,5 @@
 # CryptoScan (Volatility 3 Plugin)
-## Where to move
+## Location
 ```
 volatility3-1.0.1\volatility3\framework\plugins\windows\cryptoscan.py
 ``` 
