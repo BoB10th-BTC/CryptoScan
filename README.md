@@ -1,4 +1,8 @@
 # CryptoScan (Volatility 3 Plugin)
+## Where to move
+```
+volatility3-1.0.1\volatility3\framework\plugins\windows\cryptoscan.py
+``` 
 ## Made by
 BTC (BoB Tracers of Coin)
 `강정윤` `박준성` `이문규` `임민택` `정현덕`
