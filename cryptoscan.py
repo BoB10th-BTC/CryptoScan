@@ -15,7 +15,6 @@ import time
 import datetime
 import enchant
 import os
-import maya
 
 import time, pytz, requests
 from datetime import datetime
@@ -429,7 +428,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 swap_op_id = re.compile(r'("operationId":")([a-z1-9]{2,10}:[1-9]:[a-z]{3,8})')
                 swap_receive_id = re.compile(r'("receiverAccountId":")([a-z1-9]{2,10}:[1-9]:[a-z]{3,8})')
                 
-                exr = re.compile('[\\\\n]?[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}\\\\n[a-zA-Z]{3,8}')
+                
                 address_count = 0
                 tx_count = 0
 
@@ -780,7 +779,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                 dup = []
                 
                 while True:
-                    pid_data = pid_buf.read(1024)
+                    pid_data = pid_buf.read(1000)
                     pid_data_ascii = ''
                     
                     for i in pid_data:
@@ -807,7 +806,8 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                     break
                                 
                     if len(mnemonic_word) >= 24:
-                        print('mnemonic word list')
+                        #print(pid_data_ascii)
+                        print('mnemonic word list(physical address:0x%x)'%(pid_buf.tell()-1024))
                         print(mnemonic_word)
                             
                         
@@ -831,12 +831,11 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                 if self.config['btc']:
                                     url = url + '/btc/tx/'
 
-                                
+                                time.sleep(15)
                                 response =requests.get(url+transaction)
                                 #print(response.url)
                                 if response.status_code == 200:
                                     try:
-                                        time.sleep(10)
                                         headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36'}
                                         res = requests.get('https://chain.api.btc.com/v3/tx/'+transaction, headers=headers)
                                         result = json.loads(json.dumps(res.json()))
