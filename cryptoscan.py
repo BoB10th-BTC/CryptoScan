@@ -772,7 +772,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                                 yield (0, (str(hex(offset)),str(hex(mapped_offset)),swap_id[4].replace('"',''),swap_from,swap_to))
                                 printed_str.append(swap_id)
                     
-            if self.config['mnemonic']:
+            if self.config['mnemonic']: # Process dump should be preceded
                 pid_buf = open("pid.{}.dmp".format(pid),'rb')
                 #w_list = open('wordlist.txt','r')
                 size = os.path.getsize("pid.{}.dmp".format(pid))
