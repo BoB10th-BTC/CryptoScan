@@ -2,6 +2,8 @@
 ## Location
 ```
 volatility3-1.0.1\volatility3\framework\plugins\windows\cryptoscan.py
+volatility3-1.0.1\bob.jpg
+volatility3-1.0.1\wordlist.txt
 ``` 
 ## Made by
 BTC (BoB Tracers of Coin)
