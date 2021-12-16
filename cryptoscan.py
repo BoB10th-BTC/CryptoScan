@@ -1,5 +1,5 @@
 #Maintainer: MoonGyu Lee
-#Author: MoonGyu Lee
+#Author: MoonGyu Lee, JeongYoon Kang
 #Contact: dlansrb5800@gmail.com
 #Description:
 #This plugin help you analyze hidden coin information on memory which is sotred in porcess.
