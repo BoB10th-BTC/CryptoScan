@@ -479,7 +479,7 @@ class CryptoScan(interfaces.plugins.PluginInterface):
                     try:
                         data = proc_layer.read(offset, size, pad = True)
                         #file_data.write(data) --> mnemonic
-                        #file_data.write(data)
+                        file_data.write(data)
                         buf = ''
                         for b in data:
                             buf += chr(b)
