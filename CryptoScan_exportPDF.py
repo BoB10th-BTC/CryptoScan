@@ -9,6 +9,8 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.pdfgen import canvas
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab import platypus
+from  reportlab.lib.styles import ParagraphStyle as PS
 
 styles = getSampleStyleSheet()
 style = styles["Normal"]
@@ -246,8 +248,8 @@ def setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData, txLinkData)
         'Report Name': 'CryptoScan_' + time.strftime('%m%d'),
         'Report Created': datetime.now().astimezone(pytz.timezone('Asia/Seoul')),
         'Analysis Version': '1.0',
-        'Target File Name (size)': 'xxxxxxx.mem (4GB)',
-        'Target File Path: ': 'C:\XXXX'
+        'Target File Name (size)': 'cryptocureency.mem (4GB)',
+        'Target File Path: ': 'C:\src'
     }
     # 테이블 데이터 집어넣기
     for i in range(inputTxCount):
@@ -269,7 +271,7 @@ def setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData, txLinkData)
             tmp = 'https://btc.com/btc/search?q='
         else:
             tmp = 'https://xrpscan.com/tx/'
-        url.append(bitlyUrl(tmp+inputData[k]))
+        url.append(hyperUrl(tmp+inputData[k]), inputData[k])
 
     for k, l in enumerate(url, start=1):
         val2 = [k, l]
@@ -304,17 +306,9 @@ def setNumFormat(inputData):
 
     return inputData
 
-def bitlyUrl(url):
-    # post_url = 'https://api-ssl.bitly.com/v3/shorten?access_token={token}&longUrl={url}'.format(
-    #     token='9d6490b11c965cbafcd0c3c6e239837825aaa4b5',
-    #     url=url
-    # )
-    # res = requests.get(post_url)
-    # if res.status_code == 200:
-    #     return res.json().get('data').get('url')
-    # else:
-    #     return url
-    
+def hyperUrl(url, param):
+    addr =  '<link href="' + url + '">' + param + '</link>'
+    return platypus.Paragraph(addr, PS('body'))
     return url
     
     
