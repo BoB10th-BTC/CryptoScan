@@ -27,6 +27,9 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.pdfgen import canvas
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab import platypus
+from  reportlab.lib.styles import ParagraphStyle as PS
+
 
 from requests.api import request
 from volatility3.framework import exceptions, renderers, interfaces
@@ -290,11 +293,14 @@ def setDoc(inputAddrCount, inputTxCount, addrTableData, txTableData, txLinkData,
     # btc.com
     url = []
     for k in range(int(inputData[0]) * 3 + 2, len(inputData), 5): # 14, 19, 24, 29
-        if(reqtype != 'ripple'):
+        if(reqtype == 'bitcoin'):
             tmp = 'https://btc.com/btc/search?q='
+        elif(reqtype == 'ethereum'):
+            tmp = 'https://btc.com/btc/search?q=0x'
         else:
             tmp = 'https://xrpscan.com/tx/'
         url.append(bitlyUrl(tmp+inputData[k]))
+        url.append(hyperUrl(tmp+inputData[k], inputData[k]))
 
     for k, l in enumerate(url, start=1):
         val2 = [k, l]
@@ -342,6 +348,11 @@ def bitlyUrl(url):
     
     return url
 
+def hyperUrl(url, param):
+    addr =  '<link href="' + url + '">' + param + '</link>'
+    return platypus.Paragraph(addr, PS('body'))
+    return url
+    
 class CryptoScan(interfaces.plugins.PluginInterface):
     """Prints the memory map"""
 
